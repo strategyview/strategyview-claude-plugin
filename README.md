@@ -21,7 +21,8 @@ server, connected to the same session. This plugin only moves messages.
 
 ### Setup
 
-Requires [Bun](https://bun.sh).
+Requires [Bun](https://bun.sh). If it is missing, `/gexchart:connect` notices, asks whether to
+install it, and installs it only with your approval.
 
 Once, to register the marketplace:
 
