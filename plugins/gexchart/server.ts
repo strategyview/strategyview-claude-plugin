@@ -15,11 +15,20 @@
  *
  * There is no pairing step. The token says whose Claude this is, and StrategyView only hands this
  * process the questions that user asked, so every message that arrives is already theirs.
+ *
+ * The chart's data tools come through here too. They live in the engine's MCP endpoint, which
+ * takes the connector token in its path; the person never sees that token, so they could not
+ * connect the endpoint themselves. This process opens it with the token it holds, lists its
+ * tools beside its own, and forwards each call — nothing about options is known here, and the
+ * engine stays the one place the tools are defined.
  */
 
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -243,7 +252,9 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 const mcp = new Server(
   { name: 'gexchart', version: '0.1.0' },
   {
-    capabilities: { tools: {}, experimental: { 'claude/channel': {} } },
+    // listChanged, because the data tools appear only once the session is connected, and
+    // disappear if the connection is revoked — Claude has to be told to ask again.
+    capabilities: { tools: { listChanged: true }, experimental: { 'claude/channel': {} } },
     instructions: [
       'Questions from the GEX Chart assistant panel arrive as',
       '<channel source="gexchart" message_id="..." workspace_id="..." timeframe="...">.',
@@ -253,7 +264,8 @@ const mcp = new Server(
       'passing the message_id from the tag.',
       '',
       'The remaining attributes describe what they are looking at right now. Treat them as the',
-      'context of the question rather than part of it.',
+      'context of the question rather than part of it. Once connected, this server also offers',
+      'the tools that read the chart\'s data; use them rather than estimating any number.',
       '',
       'If this session is not connected, the panel cannot reach it. Tell the user to press',
       'Connect with Claude in GEX Chart and run /gexchart:connect with the code it shows.',
@@ -268,11 +280,60 @@ const mcp = new Server(
 let config = loadConfig()
 let polling: AbortController | undefined
 
+/** The engine's MCP endpoint, opened with the connector token once there is one. */
+let upstream: Client | undefined
+let upstreamTools: Tool[] = []
+const LOCAL_TOOLS = new Set(['reply', 'connect'])
+
+/** The endpoint's URL carries the token, so no error text leaves this process with it inside. */
+const scrub = (detail: string, token: string): string => detail.split(token).join('<token>')
+
+const closeUpstream = async (): Promise<void> => {
+  const previous = upstream
+  upstream = undefined
+  upstreamTools = []
+  await previous?.close().catch(() => undefined)
+}
+
+/**
+ * Opens the engine's tools for `current` and tells Claude the list changed.
+ *
+ * A failure here leaves the chat working without data tools rather than refusing to connect:
+ * answering from the chart's context alone beats not answering, and the reason goes to stderr.
+ */
+const openUpstream = async (current: Config): Promise<void> => {
+  await closeUpstream()
+  const client = new Client({ name: 'gexchart', version: '0.1.0' })
+
+  try {
+    const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
+    await client.connect(new StreamableHTTPClientTransport(endpoint))
+
+    const tools: Tool[] = []
+    let cursor: string | undefined
+    do {
+      const page = await client.listTools(cursor === undefined ? {} : { cursor })
+      tools.push(...page.tools)
+      cursor = page.nextCursor
+    } while (cursor !== undefined)
+
+    upstream = client
+    // A local tool wins a name clash: `reply` and `connect` are how this bridge works at all.
+    upstreamTools = tools.filter((tool) => !LOCAL_TOOLS.has(tool.name))
+    process.stderr.write(`gexchart: ${upstreamTools.length} data tools available\n`)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    process.stderr.write(`gexchart: data tools unavailable (${scrub(detail, current.token)})\n`)
+    await client.close().catch(() => undefined)
+  }
+
+  await mcp.sendToolListChanged().catch(() => undefined)
+}
+
 const text = (value: string) => ({ content: [{ type: 'text', text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
 
-mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
+const LOCAL_TOOL_DEFINITIONS: Tool[] = [
     {
       name: 'reply',
       description:
@@ -307,7 +368,10 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['code'],
       },
     },
-  ],
+]
+
+mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [...LOCAL_TOOL_DEFINITIONS, ...upstreamTools],
 }))
 
 mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -325,6 +389,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
       config = await redeemCode(url, code.trim())
       saveConfig(config, url)
       startPolling(config)
+      await openUpstream(config)
       return text(`Connected to ${new URL(url).host}. Questions from the chart panel arrive here.`)
     } catch (error) {
       return failure(error instanceof Error ? error.message : String(error))
@@ -351,6 +416,19 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
+  if (upstream !== undefined && upstreamTools.some((tool) => tool.name === request.params.name)) {
+    const current = config
+    try {
+      return await upstream.callTool({ name: request.params.name, arguments: args })
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      return failure(current === undefined ? detail : scrub(detail, current.token))
+    }
+  }
+
+  if (config === undefined) {
+    return failure('Not connected. Run /gexchart:connect with the code from the chart.')
+  }
   return failure(`unknown tool: ${request.params.name}`)
 })
 
@@ -377,6 +455,8 @@ const disconnect = async (): Promise<void> => {
   const url = configuredUrl()
   config = undefined
   saveConfig(undefined, url)
+  await closeUpstream()
+  await mcp.sendToolListChanged().catch(() => undefined)
   await mcp.notification({
     method: 'notifications/claude/channel',
     params: {
@@ -448,4 +528,5 @@ if (config === undefined) {
   process.stderr.write('gexchart: not connected — run /gexchart:connect <code> from the chart\n')
 } else {
   startPolling(config)
+  void openUpstream(config)
 }
