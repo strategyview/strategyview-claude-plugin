@@ -46,6 +46,10 @@ listening straight away — no restart. The token never appears in the conversat
 > plans an admin can allow it in managed settings instead, which keeps the ordinary flag
 > working. See `allowedChannelPlugins` in the Claude Code channel documentation.
 
+The chart's data tools come through the plugin too: once connected it opens StrategyView's MCP
+endpoint with the token it holds and offers those tools to Claude. Nothing else to install, and
+no `claude mcp add`.
+
 There is no pairing step. The token says whose Claude this is, and StrategyView only hands the
 plugin the questions that user asked. Disconnecting is done from the chart; the plugin notices
 on its next poll and asks for a new code.
