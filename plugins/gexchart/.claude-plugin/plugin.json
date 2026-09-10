@@ -1,0 +1,6 @@
+{
+  "name": "gexchart",
+  "description": "GEX Chart channel for Claude Code — bridges the chart's assistant panel into your session, carrying what you are looking at. Pairing and allowlist via /gexchart:access.",
+  "version": "0.0.1",
+  "keywords": ["gexchart", "strategyview", "options", "trading", "channel", "mcp"]
+}

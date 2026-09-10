@@ -1,0 +1,14 @@
+{
+  "name": "strategyview",
+  "owner": {
+    "name": "StrategyView",
+    "url": "https://strategyview.trade"
+  },
+  "plugins": [
+    {
+      "name": "gexchart",
+      "source": "./plugins/gexchart",
+      "description": "Answer questions about the GEX Chart from your own Claude Code session."
+    }
+  ]
+}
