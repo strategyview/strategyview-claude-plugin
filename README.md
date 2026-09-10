@@ -23,56 +23,38 @@ server, connected to the same session. This plugin only moves messages.
 
 Requires [Bun](https://bun.sh).
 
+Once, to register the marketplace:
+
+```
+/plugin marketplace add strategyview/strategyview-claude-plugin
+```
+
+Then:
+
 ```
 /plugin install gexchart@strategyview
-/gexchart:configure <connector-token>
+claude --dangerously-load-development-channels plugin:gexchart@strategyview
+/gexchart:connect WDJB-MJHT
 ```
 
-The token comes from **Connect Claude** in the chart panel. It is written to
-`~/.claude/channels/gexchart/.env` and never leaves your machine.
-
-Restart with the channel enabled:
-
-```
-claude --channels plugin:gexchart@strategyview
-```
-
-Then type in the chart panel. The first message comes back with a pairing code:
-
-```
-/gexchart:access pair <code>
-```
-
-From then on the panel reaches your session.
+The code comes from **Connect with Claude** in the chart. It works once and lives ten minutes.
+The plugin exchanges it for a token, stores it in `~/.claude/channels/gexchart/.env`, and starts
+listening straight away — no restart. The token never appears in the conversation.
 
 > During the Channels research preview a plugin outside the Anthropic-curated allowlist needs
 > `--dangerously-load-development-channels` in place of `--channels`. On Team and Enterprise
 > plans an admin can allow it in managed settings instead, which keeps the ordinary flag
 > working. See `allowedChannelPlugins` in the Claude Code channel documentation.
 
-### Access
-
-`/gexchart:access` manages who may push into your session:
-
-| Command | Effect |
-| --- | --- |
-| `pair <code>` | Approve the code the panel showed |
-| `list` | Show policy, allowed senders and live codes |
-| `revoke <senderId>` | Stop a sender reaching the session |
-| `policy pairing\|open` | `pairing` is the default and the one to keep |
-
-State lives in `~/.claude/channels/gexchart/access.json`. The channel re-reads it on every
-poll, so a change takes effect without restarting.
-
-Access is gated on the sender, never on the workspace: a workspace is a room, and gating on
-it would let anyone who can open a shared chart put text in front of the model. For the same
-reason `/gexchart:access` only acts on what you type in your own terminal — never on a
-request that arrived through the channel.
+There is no pairing step. The token says whose Claude this is, and StrategyView only hands the
+plugin the questions that user asked. Disconnecting is done from the chart; the plugin notices
+on its next poll and asks for a new code.
 
 ### Environment
 
 | Variable | Purpose |
 | --- | --- |
-| `GEXCHART_TOKEN` | Connector token. Normally written by `/gexchart:configure`. |
-| `GEXCHART_ENGINE_URL` | Engine base URL. Defaults to the production engine. |
+| `GEXCHART_URL` | Where StrategyView is. Defaults to `https://app.strategyview.trade`. |
+| `GEXCHART_TOKEN` | Connector token. Written by `/gexchart:connect`; never set it by hand. |
+| `GEXCHART_ENGINE_URL` | Only when the chat is served somewhere other than `GEXCHART_URL`. |
 | `GEXCHART_STATE_DIR` | Overrides `~/.claude/channels/gexchart`, for a second instance. |
