@@ -73,6 +73,7 @@ on its next poll and asks for a new code.
 | --- | --- |
 | `agents/satoshi.md` | The harness: the session's prompt, and which tools it may use. |
 | `skills/connect` | `/gexchart:connect` — connecting a session, installing Bun if needed. |
+| `skills/dealer-positioning` | Dealer gamma positioning: where gamma sits by expiry and strike, the structure by days to expiry, the tape check, and the Coinbase book contrast. |
 
 Guides for the kinds of question the chart answers go in `skills/`, one per kind. Satoshi loads
 them when a question needs one; the agent itself holds only the rules.
