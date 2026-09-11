@@ -266,7 +266,7 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 // --- MCP server --------------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'gexchart', version: '0.2.1' },
+  { name: 'gexchart', version: '0.3.0' },
   {
     // listChanged, because the data tools appear only once the session is connected, and
     // disappear if the connection is revoked — Claude has to be told to ask again.
@@ -319,7 +319,7 @@ const closeUpstream = async (): Promise<void> => {
  */
 const openUpstream = async (current: Config): Promise<void> => {
   await closeUpstream()
-  const client = new Client({ name: 'gexchart', version: '0.2.1' })
+  const client = new Client({ name: 'gexchart', version: '0.3.0' })
 
   try {
     const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
