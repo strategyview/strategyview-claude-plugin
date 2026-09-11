@@ -266,7 +266,7 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 // --- MCP server --------------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'gexchart', version: '0.2.0' },
+  { name: 'gexchart', version: '0.2.1' },
   {
     // listChanged, because the data tools appear only once the session is connected, and
     // disappear if the connection is revoked — Claude has to be told to ask again.
@@ -319,7 +319,7 @@ const closeUpstream = async (): Promise<void> => {
  */
 const openUpstream = async (current: Config): Promise<void> => {
   await closeUpstream()
-  const client = new Client({ name: 'gexchart', version: '0.2.0' })
+  const client = new Client({ name: 'gexchart', version: '0.2.1' })
 
   try {
     const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
@@ -540,9 +540,44 @@ const startPolling = (current: Config): void => {
   void poll(current, polling.signal)
 }
 
+// --- Lifetime ----------------------------------------------------------------------------
+
+/** How often to check that the Claude Code session that started this is still there. */
+const PARENT_CHECK_MS = 5_000
+
+/**
+ * Ends this process with the session it belongs to.
+ *
+ * The poll loop keeps the process alive on its own, so without this it outlives Claude Code:
+ * orphaned, still holding the token and still draining the mailbox, taking questions no session
+ * will ever see. Each one lost is a panel waiting for an answer that cannot come.
+ */
+const shutdown = (): never => {
+  polling?.abort()
+  process.exit(0)
+}
+
+// Claude Code closing the session closes this end of the pipe.
+process.stdin.on('end', shutdown)
+process.stdin.on('close', shutdown)
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+  process.on(signal, shutdown)
+}
+
+// The pipe is not always enough. This runs under `bun run`, and if that wrapper is killed while
+// Claude Code lives on, the pipe stays open and nothing arrives on it — the only sign is being
+// handed to init. Checked on a timer that does not keep the process alive by itself.
+const parentAtStart = process.ppid
+setInterval(() => {
+  if (process.ppid !== parentAtStart) {
+    shutdown()
+  }
+}, PARENT_CHECK_MS).unref()
+
 forgetStoredToken()
 
 // Last, so every handler and everything it calls is defined before the first request can arrive.
+mcp.onclose = shutdown
 await mcp.connect(new StdioServerTransport())
 
 if (config === undefined) {
