@@ -1,6 +1,6 @@
 {
   "name": "strategyview-channel-gexchart",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "UNLICENSED",
   "type": "module",
   "bin": "./server.ts",
