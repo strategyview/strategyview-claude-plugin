@@ -39,8 +39,14 @@ claude --dangerously-load-development-channels plugin:gexchart@strategyview
 ```
 
 The code comes from **Connect with Claude** in the chart. It works once and lives ten minutes.
-The plugin exchanges it for a token, stores it in `~/.claude/channels/gexchart/.env`, and starts
-listening straight away — no restart. The token never appears in the conversation.
+The plugin exchanges it for a token and starts listening straight away — no restart. The token
+never appears in the conversation, and it is never written to disk: it lives in the session that
+ran the command.
+
+**One session answers the chart.** Claude Code starts the plugin in every session you open, and
+a question from the chart goes to exactly one of them, so the connection belongs to the session
+where you connected. Connecting another session replaces it — the previous one is told it is no
+longer connected. Restarting Claude means a new code from the chart.
 
 > During the Channels research preview a plugin outside the Anthropic-curated allowlist needs
 > `--dangerously-load-development-channels` in place of `--channels`. On Team and Enterprise
@@ -60,6 +66,6 @@ on its next poll and asks for a new code.
 | Variable | Purpose |
 | --- | --- |
 | `GEXCHART_URL` | Where StrategyView is. Defaults to `https://app.strategyview.trade`. |
-| `GEXCHART_TOKEN` | Connector token. Written by `/gexchart:connect`; never set it by hand. |
+| `GEXCHART_TOKEN` | A connector token for this process only, for driving the plugin by hand. Normally `/gexchart:connect` holds it in memory. |
 | `GEXCHART_ENGINE_URL` | Only when the chat is served somewhere other than `GEXCHART_URL`. |
 | `GEXCHART_STATE_DIR` | Overrides `~/.claude/channels/gexchart`, for a second instance. |
