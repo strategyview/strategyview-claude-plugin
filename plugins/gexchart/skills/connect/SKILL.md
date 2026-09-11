@@ -70,7 +70,7 @@ Then tell them to restart Claude with the channel — the plugin is started when
 and Bun was not there then:
 
 ```bash
-claude --dangerously-load-development-channels plugin:gexchart@strategyview
+claude --agent gexchart:satoshi --dangerously-load-development-channels plugin:gexchart@strategyview
 ```
 
 If Bun came from the `curl` or PowerShell installer, that has to be run from a **new terminal
