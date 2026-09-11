@@ -77,11 +77,17 @@ on its next poll and asks for a new code.
 Guides for the kinds of question the chart answers go in `skills/`, one per kind. Satoshi loads
 them when a question needs one; the agent itself holds only the rules.
 
+### Production and other environments
+
+`/gexchart:connect <code>` connects to production. Any other environment is named in the command —
+`/gexchart:connect <code> http://localhost:5173` — and the chart puts its own address in the
+command it shows whenever it is not production, so copying it is enough. Nothing is remembered
+between connections: each one goes where its command says, and the answer names it.
+
 ### Environment
 
 | Variable | Purpose |
 | --- | --- |
-| `GEXCHART_URL` | Where StrategyView is. Defaults to `https://app.strategyview.trade`. |
+| `GEXCHART_URL` | The default target for this process when `/gexchart:connect` names none. Production (`https://app.strategyview.trade`) otherwise. |
 | `GEXCHART_TOKEN` | A connector token for this process only, for driving the plugin by hand. Normally `/gexchart:connect` holds it in memory. |
 | `GEXCHART_ENGINE_URL` | Only when the chat is served somewhere other than `GEXCHART_URL`. |
-| `GEXCHART_STATE_DIR` | Overrides `~/.claude/channels/gexchart`, for a second instance. |

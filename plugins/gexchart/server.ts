@@ -36,14 +36,15 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { rmSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 
-// Overridable so a second instance, or a test, can run without colliding on one state file.
-const STATE_DIR =
-  process.env.GEXCHART_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'gexchart')
-const ENV_FILE = join(STATE_DIR, '.env')
+/**
+ * Where versions before 0.3.1 kept state: the token first, then the last address connected to.
+ * Nothing is kept there any more — see `targetUrl` — and the file is removed on start.
+ */
+const LEGACY_STATE_FILE = join(homedir(), '.claude', 'channels', 'gexchart', '.env')
 
 /**
  * The one address the plugin needs. IAM (/auth), the chat (/channel) and the chart's data (/mcp)
@@ -82,37 +83,18 @@ type Config = {
 }
 
 /**
- * Minimal .env reader. A dependency for this would be a second package to audit in a repository
- * whose whole point is that it is public and has nothing in it.
+ * Which environment a connection goes to, decided each time and never remembered.
+ *
+ * No address means production. Any other environment is named in the command itself — the chart
+ * puts its own address in the command it shows whenever it is not production — so the command
+ * someone copies always carries the right target. Remembering the last one looked convenient and
+ * was a trap: after a test against a local stack, a plain connect from the production chart went
+ * to localhost, and the production panel waited on a session that was listening somewhere else.
+ *
+ * `GEXCHART_URL` overrides the default for one process, for driving the plugin by hand.
  */
-const readEnvFile = (): Record<string, string> => {
-  if (!existsSync(ENV_FILE)) {
-    return {}
-  }
-
-  const entries: Record<string, string> = {}
-
-  for (const rawLine of readFileSync(ENV_FILE, 'utf8').split('\n')) {
-    const line = rawLine.trim()
-    if (line.length === 0 || line.startsWith('#')) {
-      continue
-    }
-    const separator = line.indexOf('=')
-    if (separator <= 0) {
-      continue
-    }
-    entries[line.slice(0, separator).trim()] = line
-      .slice(separator + 1)
-      .trim()
-      .replace(/^["']|["']$/g, '')
-  }
-
-  return entries
-}
-
-/** The address to connect to, even before there is a token. */
-const configuredUrl = (): string =>
-  trimSlash(process.env.GEXCHART_URL ?? readEnvFile().GEXCHART_URL ?? DEFAULT_URL)
+const targetUrl = (requested: string | undefined): string =>
+  trimSlash(requested ?? process.env.GEXCHART_URL ?? DEFAULT_URL)
 
 /**
  * A token handed to this one process in its environment — for driving the plugin by hand. The
@@ -126,27 +108,17 @@ const configFromEnvironment = (): Config | undefined => {
     return undefined
   }
 
-  const url = configuredUrl()
+  const url = targetUrl(undefined)
   return { token, url, engineUrl: trimSlash(process.env.GEXCHART_ENGINE_URL ?? url) }
 }
 
 /**
- * Remembers where the person connected, so the next connect needs only the code. The address and
- * nothing else — see the header for why the token is never written.
+ * Earlier versions left a state file behind — a token, or a remembered address that sent later
+ * connections to the wrong environment. Nothing reads it now; it is removed so it cannot confuse
+ * anyone looking, and so no credential sits on disk doing nothing.
  */
-const rememberUrl = (url: string): void => {
-  mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 })
-  writeFileSync(ENV_FILE, `GEXCHART_URL=${url}\n`, { mode: 0o600 })
-}
-
-/**
- * Earlier versions wrote the token to the state file. Nothing reads it any more, and a credential
- * for the person's account should not sit on disk for ninety days doing nothing.
- */
-const forgetStoredToken = (): void => {
-  if ('GEXCHART_TOKEN' in readEnvFile()) {
-    rememberUrl(configuredUrl())
-  }
+const removeLegacyState = (): void => {
+  rmSync(LEGACY_STATE_FILE, { force: true })
 }
 
 // --- StrategyView client -----------------------------------------------------------------
@@ -266,7 +238,7 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 // --- MCP server --------------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'gexchart', version: '0.3.0' },
+  { name: 'gexchart', version: '0.3.1' },
   {
     // listChanged, because the data tools appear only once the session is connected, and
     // disappear if the connection is revoked — Claude has to be told to ask again.
@@ -319,7 +291,7 @@ const closeUpstream = async (): Promise<void> => {
  */
 const openUpstream = async (current: Config): Promise<void> => {
   await closeUpstream()
-  const client = new Client({ name: 'gexchart', version: '0.3.0' })
+  const client = new Client({ name: 'gexchart', version: '0.3.1' })
 
   try {
     const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
@@ -378,7 +350,9 @@ const LOCAL_TOOL_DEFINITIONS: Tool[] = [
           code: { type: 'string', description: 'The code from the chart, e.g. WDJB-MJHT.' },
           url: {
             type: 'string',
-            description: `Only for another environment. Defaults to ${DEFAULT_URL}.`,
+            description:
+              `Only when the command from the chart names one. Without it, production ` +
+              `(${DEFAULT_URL}). Never carried over from an earlier connection.`,
           },
         },
         required: ['code'],
@@ -399,14 +373,19 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
       return failure('connect needs the code shown in the chart.')
     }
 
-    const url = trimSlash(readString(args, 'url') ?? configuredUrl())
+    const url = targetUrl(readString(args, 'url'))
 
     try {
       config = await redeemCode(url, code.trim())
-      rememberUrl(url)
       startPolling(config)
       await openUpstream(config)
-      return text(`Connected to ${new URL(url).host}. Questions from the chart panel arrive here.`)
+      // The environment is said out loud: a session connected to the wrong one looks exactly like
+      // a working one until a question from the other never arrives.
+      const environment = url === trimSlash(DEFAULT_URL) ? 'production' : 'not production'
+      return text(
+        `Connected to ${new URL(url).host} (${environment}). ` +
+          'Questions from that chart panel arrive here.'
+      )
     } catch (error) {
       return failure(error instanceof Error ? error.message : String(error))
     }
@@ -574,7 +553,7 @@ setInterval(() => {
   }
 }, PARENT_CHECK_MS).unref()
 
-forgetStoredToken()
+removeLegacyState()
 
 // Last, so every handler and everything it calls is defined before the first request can arrive.
 mcp.onclose = shutdown
