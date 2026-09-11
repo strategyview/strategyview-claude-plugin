@@ -84,8 +84,10 @@ If Bun was already there in step 1, only the restart above is needed.
 Call the `connect` tool of the gexchart server with `code`, and `url` only if they gave one.
 
 - **Success** — say the session is connected and that questions typed in the chart panel will
-  now arrive here. Nothing else to run, no restart.
+  now arrive here. Nothing else to run, no restart. Mention that this is now the one session
+  that answers the chart: any session connected before it stops, and restarting Claude needs a
+  new code.
 - **Failure** — the code is single use and lives ten minutes. Say it was not accepted and ask
   for a fresh one from the chart. Do not retry the same code.
 
-Never print, repeat or ask for a token. The tool stores it and does not return it.
+Never print, repeat or ask for a token. The tool keeps it in memory and does not return it.

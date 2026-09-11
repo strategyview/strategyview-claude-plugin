@@ -9,9 +9,16 @@
  * API. With no inbound port here, nothing has to be reachable from a browser.
  *
  * Connecting is one command. The chart shows a short code; `/gexchart:connect <code>` hands it to
- * the `connect` tool below, which redeems it with IAM for a connector token, stores it, and starts
- * listening on the spot — no restart. The token never passes through the conversation: the tool
- * answers "connected" and nothing else.
+ * the `connect` tool below, which redeems it with IAM for a connector token and starts listening
+ * on the spot — no restart. The token never passes through the conversation: the tool answers
+ * "connected" and nothing else.
+ *
+ * The token lives in this process and nowhere else. Claude Code starts a copy of this plugin in
+ * every session the person opens, and a question from the chart is handed to exactly one of them.
+ * A token on disk would put every one of those copies on the same mailbox, and the question would
+ * land on whichever polled first — usually a session with no channel, where it is dropped without
+ * a word. Kept here, the session that ran connect is the one that answers, and connecting another
+ * session replaces it: IAM revokes the previous connector, and its copy stops on the next 401.
  *
  * There is no pairing step. The token says whose Claude this is, and StrategyView only hands this
  * process the questions that user asked, so every message that arrives is already theirs.
@@ -107,30 +114,39 @@ const readEnvFile = (): Record<string, string> => {
 const configuredUrl = (): string =>
   trimSlash(process.env.GEXCHART_URL ?? readEnvFile().GEXCHART_URL ?? DEFAULT_URL)
 
-const loadConfig = (): Config | undefined => {
-  const file = readEnvFile()
-  const token = process.env.GEXCHART_TOKEN ?? file.GEXCHART_TOKEN
+/**
+ * A token handed to this one process in its environment — for driving the plugin by hand. The
+ * environment belongs to the process, so this cannot leak into another session the way a file
+ * would.
+ */
+const configFromEnvironment = (): Config | undefined => {
+  const token = process.env.GEXCHART_TOKEN
 
   if (token === undefined || token.length === 0) {
     return undefined
   }
 
   const url = configuredUrl()
-  const engineUrl = trimSlash(process.env.GEXCHART_ENGINE_URL ?? file.GEXCHART_ENGINE_URL ?? url)
-
-  return { token, url, engineUrl }
+  return { token, url, engineUrl: trimSlash(process.env.GEXCHART_ENGINE_URL ?? url) }
 }
 
-/** Written owner-only: the file holds a credential for the user's account. */
-const saveConfig = (config: Config | undefined, url: string): void => {
+/**
+ * Remembers where the person connected, so the next connect needs only the code. The address and
+ * nothing else — see the header for why the token is never written.
+ */
+const rememberUrl = (url: string): void => {
   mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 })
+  writeFileSync(ENV_FILE, `GEXCHART_URL=${url}\n`, { mode: 0o600 })
+}
 
-  const lines = [`GEXCHART_URL=${url}`]
-  if (config !== undefined) {
-    lines.push(`GEXCHART_TOKEN=${config.token}`, `GEXCHART_ENGINE_URL=${config.engineUrl}`)
+/**
+ * Earlier versions wrote the token to the state file. Nothing reads it any more, and a credential
+ * for the person's account should not sit on disk for ninety days doing nothing.
+ */
+const forgetStoredToken = (): void => {
+  if ('GEXCHART_TOKEN' in readEnvFile()) {
+    rememberUrl(configuredUrl())
   }
-
-  writeFileSync(ENV_FILE, `${lines.join('\n')}\n`, { mode: 0o600 })
 }
 
 // --- StrategyView client -----------------------------------------------------------------
@@ -250,7 +266,7 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 // --- MCP server --------------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'gexchart', version: '0.1.0' },
+  { name: 'gexchart', version: '0.2.0' },
   {
     // listChanged, because the data tools appear only once the session is connected, and
     // disappear if the connection is revoked — Claude has to be told to ask again.
@@ -277,7 +293,7 @@ const mcp = new Server(
   }
 )
 
-let config = loadConfig()
+let config = configFromEnvironment()
 let polling: AbortController | undefined
 
 /** The engine's MCP endpoint, opened with the connector token once there is one. */
@@ -303,7 +319,7 @@ const closeUpstream = async (): Promise<void> => {
  */
 const openUpstream = async (current: Config): Promise<void> => {
   await closeUpstream()
-  const client = new Client({ name: 'gexchart', version: '0.1.0' })
+  const client = new Client({ name: 'gexchart', version: '0.2.0' })
 
   try {
     const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
@@ -387,7 +403,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     try {
       config = await redeemCode(url, code.trim())
-      saveConfig(config, url)
+      rememberUrl(url)
       startPolling(config)
       await openUpstream(config)
       return text(`Connected to ${new URL(url).host}. Questions from the chart panel arrive here.`)
@@ -448,21 +464,24 @@ const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
   })
 
 /**
- * A revoked connection stops the loop and forgets the token: retrying would only ask again with
+ * A refused connection stops the loop and forgets the token: retrying would only ask again with
  * something already refused. Claude is told, so it can say how to reconnect.
+ *
+ * Nothing on disk is touched. The usual reason for a 401 is that the person connected another
+ * session, and that session is the one that has to keep working.
  */
 const disconnect = async (): Promise<void> => {
-  const url = configuredUrl()
   config = undefined
-  saveConfig(undefined, url)
   await closeUpstream()
   await mcp.sendToolListChanged().catch(() => undefined)
   await mcp.notification({
     method: 'notifications/claude/channel',
     params: {
       content:
-        'The GEX Chart connection was revoked or has expired. Tell the user to press Connect ' +
-        'with Claude in GEX Chart and run /gexchart:connect with the new code.',
+        'This session is no longer connected to GEX Chart: another session was connected, or ' +
+        'the connection was revoked or expired. Only if the user wants this session to answer ' +
+        'the chart, tell them to press Connect with Claude in GEX Chart and run ' +
+        '/gexchart:connect with the new code here.',
       meta: { event: 'disconnected' },
     },
   })
@@ -520,6 +539,8 @@ const startPolling = (current: Config): void => {
   polling = new AbortController()
   void poll(current, polling.signal)
 }
+
+forgetStoredToken()
 
 // Last, so every handler and everything it calls is defined before the first request can arrive.
 await mcp.connect(new StdioServerTransport())
