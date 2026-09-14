@@ -1,0 +1,173 @@
+{
+  "tools": [
+    {
+      "name": "options_tape_aggression_by_strike",
+      "title": "Tape aggression by strike",
+      "description": "Traded options flow per strike over a window, split by which side crossed the spread. This is what says whether dealers are long or short the gamma at a strike — open interest alone does not, since it carries no sign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "BTC",
+              "ETH"
+            ],
+            "description": "The underlying. Deribit lists options on BTC and ETH only."
+          },
+          "from_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch."
+          },
+          "to_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "bucket_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Bucket size in ms."
+          },
+          "strike_min": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Lowest strike to include."
+          },
+          "strike_max": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Highest strike to include."
+          }
+        },
+        "required": [
+          "currency",
+          "from_ms",
+          "to_ms"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "options_tape_aggression_by_contract",
+      "title": "Tape aggression by contract",
+      "description": "The same traded flow, per contract rather than per strike, so calls and puts are told apart at the same strike.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "BTC",
+              "ETH"
+            ],
+            "description": "The underlying. Deribit lists options on BTC and ETH only."
+          },
+          "from_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch."
+          },
+          "to_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "bucket_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Bucket size in ms."
+          },
+          "strike_min": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Lowest strike to include."
+          },
+          "strike_max": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Highest strike to include."
+          }
+        },
+        "required": [
+          "currency",
+          "from_ms",
+          "to_ms"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "option_contracts_catalog",
+      "title": "Listed contracts",
+      "description": "Every option contract currently listed, with its expiry and strike. Read this before passing an expiration_timestamp anywhere else: an expiry that is not listed returns nothing, and a date guessed from a calendar usually is not listed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "options_aggression_view",
+      "title": "The options aggression widget, as displayed",
+      "description": "What the options aggression widget on the chart is showing, read the way the chart reads it: the heatmap (taker aggression per strike and side, summed over the last 300 bars of the chart timeframe, every strike) and the tape (net flow per contract over the last 30 days, inside the band spot ± spot × realised vol × √(7/365)), both with the widget's days-to-expiry filter. Use it when the question is about what the person sees in that widget. When they name a range themselves — expiries, strikes, a window — use options_tape_aggression_by_strike or _by_contract instead. Prints that arrived live after the chart loaded are not included.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chart_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The chart_key attribute of the question, e.g. \"binance-spot-btc\". The venue, market and asset the chart is drawn from."
+          },
+          "timeframe": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The timeframe attribute of the question, e.g. \"1h\". The heatmap buckets are this size."
+          },
+          "max_dte": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The widget's days-to-expiry filter: get_workspace → widgets → optionsAggression → maxDte. Omit it, or pass null, when the widget has none."
+          }
+        },
+        "required": [
+          "chart_key",
+          "timeframe"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_workspace",
+      "title": "What is mounted on a workspace",
+      "description": "Opens one workspace: the symbol, the timeframe and every indicator and widget mounted on it. Read this first when the question is about what the person is seeing — it says which of the other tools answers it, instead of guessing from the question alone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The id from list_workspaces, as it appears there — e.g. \"O8PnVPGb\"."
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ]
+}

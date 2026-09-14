@@ -84,7 +84,7 @@ Net Gamma is most concentrated, and any in between whose Net Gamma is comparable
 |---|---|---|
 | `gamma_by_strike_at_expiry` | one call per expiry picked, all in parallel | the walls of each expiry |
 | `gamma_exposure_profile` | the concentrated expiry, and the nearest if it carries real weight | spot, `zero_gamma_level`, Total / Call / Put GEX over the grid |
-| `options_tape_aggression_by_contract` | from_ms now − 86400000, to_ms now, **bucket_ms 86400000**, strike_min / strike_max about ±10% of spot | per contract: instrument_name, expiry_ms, net_contracts, buy, sell, gross, open_interest |
+| `options_tape_aggression_by_contract` | from_ms now − 86400000, to_ms now, **bucket_ms 86400000**, strike_min / strike_max from `options_aggression_view` → `band` when the question is about the chart on screen, otherwise the range the question names | per contract: instrument_name, expiry_ms, net_contracts, buy, sell, gross, open_interest |
 | `iv_vs_realized_volatility` | start_ms now − 172800000, end_ms now, bucket_ms 3600000, target_days = days to the concentrated expiry (at least 1), realized_window_days 2 | IV, RV, Spread series |
 
 Always pass `bucket_ms` to the tape tools: the dashboard refuses the call without it, although
