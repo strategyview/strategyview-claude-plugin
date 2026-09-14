@@ -1,7 +1,7 @@
 {
   "name": "gexchart",
   "description": "GEX Chart channel for Claude Code — bridges the chart's assistant panel into your session, carrying what you are looking at. Connect with /gexchart:connect <code>.",
-  "version": "0.5.0",
+  "version": "0.3.3",
   "keywords": [
     "gexchart",
     "strategyview",
