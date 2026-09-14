@@ -38,11 +38,16 @@ claude --agent gexchart:satoshi --dangerously-load-development-channels plugin:g
 /gexchart:connect WDJB-MJHT
 ```
 
-`--agent gexchart:satoshi` runs the session as Satoshi, the chart's assistant: its own prompt and
-only the chart's tools — no shell, no files. The session takes questions that come from a
-browser, so it should not be able to act on the machine it runs on, and Satoshi keeps to the chat
-instead of wandering off to fix things in the terminal. Without the flag the channel still works,
-with every tool the session normally has.
+`--agent gexchart:satoshi` runs the session as Satoshi, the chart's assistant: no shell, no files.
+The session takes questions that come from a browser, so it should not be able to act on the
+machine it runs on, and Satoshi keeps to the chat instead of wandering off to fix things in the
+terminal. Without the flag the channel still works, with every tool the session normally has.
+
+**One analyst per conversation.** Every chart window you have open is served by this one session.
+Satoshi does not answer: it hands each conversation — a chart window's thread, renewed when you
+close the chat or get a new code — to its own `gexchart:analyst` subagent, and resumes that
+analyst for the next question in the same conversation. Two windows never share a context, and
+they are answered in parallel.
 
 The code comes from **Connect with Claude** in the chart. It works once and lives ten minutes.
 The plugin exchanges it for a token and starts listening straight away — no restart. The token
@@ -71,11 +76,12 @@ on its next poll and asks for a new code.
 
 | Piece | What it is for |
 | --- | --- |
-| `agents/satoshi.md` | The harness: the session's prompt, and which tools it may use. |
+| `agents/satoshi.md` | The harness and the front desk: receives the panel's questions and routes each conversation to its own analyst. No data tools, no shell. |
+| `agents/analyst.md` | Answers one conversation — one chart window's thread — with the chart's data tools and skills. Spawned and resumed by Satoshi, so windows never share a context. |
 | `skills/connect` | `/gexchart:connect` — connecting a session, installing Bun if needed. |
 
-Guides for the kinds of question the chart answers go in `skills/`, one per kind. Satoshi loads
-them when a question needs one; the agent itself holds only the rules.
+Guides for the kinds of question the chart answers go in `skills/`, one per kind. The analyst
+loads them when a question needs one; the agents themselves hold only the rules.
 
 ### Production and other environments
 
