@@ -43,7 +43,7 @@ The session takes questions that come from a browser, so it should not be able t
 machine it runs on, and Satoshi keeps to the chat instead of wandering off to fix things in the
 terminal. Without the flag the channel still works, with every tool the session normally has.
 
-**One copilot per conversation.** Every chart window you have open is served by this one session.
+**One copilot per conversation.** Every window you have open — on the GEX Chart or in Backtesting Labs — is served by this one session.
 Satoshi does not answer: it hands each conversation — a chart window's thread, renewed when you
 close the chat or get a new code — to its own `satoshi-ai:gexchart` subagent, and resumes that
 copilot for the next question in the same conversation. Two windows never share a context, and
@@ -76,10 +76,13 @@ on its next poll and asks for a new code.
 
 | Piece | What it is for |
 | --- | --- |
-| `agents/satoshi.md` | The harness and the front desk: receives the panel's questions and routes each conversation to its own copilot. No data tools, no shell. |
-| `agents/gexchart.md` | The GEX Chart copilot: answers one conversation — one chart window's thread — with the chart's data tools and skills. Spawned and resumed by Satoshi, so windows never share a context. |
+| `agents/satoshi.md` | The harness and the front desk: receives the panels' questions and routes each conversation to its screen's copilot. No data tools, no shell. |
+| `agents/gexchart.md` | The GEX Chart copilot: one per chart window, about what the chart shows now. |
+| `agents/backtesting-labs.md` | The Backtesting Labs copilot: one per Labs window, about what already happened — patterns, rules, strategy scripts. |
+| `skills/copilot-base` | The rules every copilot answers by, preloaded into each: the channel, security, the screen as it is now, writing for the panel. |
 | `skills/connect` | `/satoshi-ai:connect` — connecting a session, installing Bun if needed. |
 | `skills/aggression-bursts` | Hidden taker aggression on Binance — large prints, sweeps, runs on one side — with `agg_trade_bursts`, without pulling the tape. |
+| `skills/backtest-strategy` | Writing a strategy script that validates, checking a rule, finding a pattern in the window, with `script_grammar`, `validate_script` and the history tools. |
 | `skills/aggression-heatmap` | The options aggression widget — heatmap per strike and tape per contract — read as the chart reads it, with `options_aggression_view`. |
 | `skills/dealer-positioning` | Dealer gamma positioning: where gamma sits by expiry and strike, the structure by days to expiry, the tape check, and the Coinbase book contrast. |
 

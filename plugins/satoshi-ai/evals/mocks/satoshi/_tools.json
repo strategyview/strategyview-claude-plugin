@@ -168,6 +168,153 @@
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
+    },
+    {
+      "name": "ohlc_history",
+      "title": "Candles",
+      "description": "Open, high, low, close and volume for a symbol on one venue. What answers where price has been, and the reference for anything about a level being reached or held.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "enum": [
+              "binance",
+              "bybit",
+              "coinbase",
+              "gate",
+              "okx"
+            ],
+            "description": "The venue the figures come from."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instrument, as the venue lists it — BTCUSDT on Binance, BTC-USD on Coinbase."
+          },
+          "market": {
+            "type": "string",
+            "enum": [
+              "spot",
+              "perpetual"
+            ],
+            "default": "spot",
+            "description": "Which book: the spot pair or the perpetual."
+          },
+          "timeframe": {
+            "type": "string",
+            "default": "1h",
+            "description": "Candle size: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
+          },
+          "start": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch. Omit for the most recent bars."
+          },
+          "end": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "How many rows at most. The dashboard caps it."
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "ohlc_data_range",
+      "title": "How far back the candles go",
+      "description": "The first and last bar stored for a symbol and timeframe. Ask before a long window, so a range with no data is known rather than reported as an empty market.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "enum": [
+              "bybit",
+              "coinbase",
+              "gate",
+              "okx"
+            ],
+            "description": "The venue the figures come from."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instrument, as the venue lists it — BTCUSDT on Binance, BTC-USD on Coinbase."
+          },
+          "market": {
+            "type": "string",
+            "enum": [
+              "spot",
+              "perpetual"
+            ],
+            "default": "spot",
+            "description": "Which book: the spot pair or the perpetual."
+          },
+          "timeframe": {
+            "type": "string",
+            "default": "1h",
+            "description": "Candle size: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "validate_script",
+      "title": "Validate a rule script",
+      "description": "Parses a script and reports what is wrong with it, without fetching data or running anything. Call it on every draft before the script is run in Labs: it is free, and its errors name the position and list what would have been valid there.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The rule script, exactly as it would be run. script_grammar says what it may contain."
+          },
+          "chart": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Aliases on the chart and the plots each exposes — in Labs, the chart_plots attribute of the question, e.g. {\"ema9\": [\"ema\"]}. Omit only to check syntax: without it a plot that does not exist passes here and fails at run time."
+          }
+        },
+        "required": [
+          "script"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "script_grammar",
+      "title": "The rule language",
+      "description": "Every statement, operator and function a strategy script may use. Read it once before writing a script, then write only what it lists and check the draft with validate_script.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
     }
   ]
 }
