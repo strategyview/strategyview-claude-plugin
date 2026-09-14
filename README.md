@@ -80,6 +80,7 @@ on its next poll and asks for a new code.
 | `agents/analyst.md` | Answers one conversation — one chart window's thread — with the chart's data tools and skills. Spawned and resumed by Satoshi, so windows never share a context. |
 | `skills/connect` | `/gexchart:connect` — connecting a session, installing Bun if needed. |
 | `skills/aggression-bursts` | Hidden taker aggression on Binance — large prints, sweeps, runs on one side — with `agg_trade_bursts`, without pulling the tape. |
+| `skills/dealer-positioning` | Dealer gamma positioning: where gamma sits by expiry and strike, the structure by days to expiry, the tape check, and the Coinbase book contrast. |
 
 Guides for the kinds of question the chart answers go in `skills/`, one per kind. The analyst
 loads them when a question needs one; the agents themselves hold only the rules.
