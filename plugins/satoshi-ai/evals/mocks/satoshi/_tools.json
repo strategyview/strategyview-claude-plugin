@@ -190,7 +190,7 @@
           "symbol": {
             "type": "string",
             "minLength": 1,
-            "description": "Instrument, as the venue lists it — BTCUSDT on Binance, BTC-USD on Coinbase."
+            "description": "The asset, BTC or ETH. The venue's own symbol is worked out from the exchange and the market, so BTC, BTC-USD, BTCUSD and BTCUSDT all read the same."
           },
           "market": {
             "type": "string",
@@ -250,7 +250,7 @@
           "symbol": {
             "type": "string",
             "minLength": 1,
-            "description": "Instrument, as the venue lists it — BTCUSDT on Binance, BTC-USD on Coinbase."
+            "description": "The asset, BTC or ETH. The venue's own symbol is worked out from the exchange and the market, so BTC, BTC-USD, BTCUSD and BTCUSDT all read the same."
           },
           "market": {
             "type": "string",
