@@ -7,7 +7,7 @@ them installable:
 /plugin marketplace add strategyview/strategyview-claude-plugin
 ```
 
-## gexchart
+## satoshi-ai
 
 Bridges the assistant panel in the GEX Chart into a running Claude Code session, so a
 question typed next to the chart is answered by your own Claude — no API key involved.
@@ -21,7 +21,7 @@ server, connected to the same session. This plugin only moves messages.
 
 ### Setup
 
-Requires [Bun](https://bun.sh). If it is missing, `/gexchart:connect` notices, asks whether to
+Requires [Bun](https://bun.sh). If it is missing, `/satoshi-ai:connect` notices, asks whether to
 install it, and installs it only with your approval.
 
 Once, to register the marketplace:
@@ -33,16 +33,21 @@ Once, to register the marketplace:
 Then:
 
 ```
-/plugin install gexchart@strategyview
-claude --agent gexchart:satoshi --dangerously-load-development-channels plugin:gexchart@strategyview
-/gexchart:connect WDJB-MJHT
+/plugin install satoshi-ai@strategyview
+claude --agent satoshi-ai:satoshi --dangerously-load-development-channels plugin:satoshi-ai@strategyview
+/satoshi-ai:connect WDJB-MJHT
 ```
 
-`--agent gexchart:satoshi` runs the session as Satoshi, the chart's assistant: its own prompt and
-only the chart's tools — no shell, no files. The session takes questions that come from a
-browser, so it should not be able to act on the machine it runs on, and Satoshi keeps to the chat
-instead of wandering off to fix things in the terminal. Without the flag the channel still works,
-with every tool the session normally has.
+`--agent satoshi-ai:satoshi` runs the session as Satoshi, the chart's assistant: no shell, no files.
+The session takes questions that come from a browser, so it should not be able to act on the
+machine it runs on, and Satoshi keeps to the chat instead of wandering off to fix things in the
+terminal. Without the flag the channel still works, with every tool the session normally has.
+
+**One copilot per conversation.** Every window you have open — on the GEX Chart or in Backtesting Labs — is served by this one session.
+Satoshi does not answer: it hands each conversation — a chart window's thread, renewed when you
+close the chat or get a new code — to its own `satoshi-ai:gexchart` subagent, and resumes that
+copilot for the next question in the same conversation. Two windows never share a context, and
+they are answered in parallel.
 
 The code comes from **Connect with Claude** in the chart. It works once and lives ten minutes.
 The plugin exchanges it for a token and starts listening straight away — no restart. The token
@@ -71,16 +76,35 @@ on its next poll and asks for a new code.
 
 | Piece | What it is for |
 | --- | --- |
-| `agents/satoshi.md` | The harness: the session's prompt, and which tools it may use. |
-| `skills/connect` | `/gexchart:connect` — connecting a session, installing Bun if needed. |
+| `agents/satoshi.md` | The harness and the front desk: receives the panels' questions and routes each conversation to its screen's copilot. No data tools, no shell. |
+| `agents/gexchart.md` | The GEX Chart copilot: one per chart window, about what the chart shows now. |
+| `agents/backtesting-labs.md` | The Backtesting Labs copilot: one per Labs window, about what already happened — patterns, rules, strategy scripts. |
+| `skills/copilot-base` | The rules every copilot answers by, preloaded into each: the channel, security, the screen as it is now, writing for the panel. |
+| `skills/connect` | `/satoshi-ai:connect` — connecting a session, installing Bun if needed. |
+| `skills/aggression-bursts` | Hidden taker aggression on Binance — large prints, sweeps, runs on one side — with `agg_trade_bursts`, without pulling the tape. |
+| `skills/backtest-strategy` | Writing a strategy script that validates, checking a rule, finding a pattern in the window, with `script_grammar`, `validate_script` and the history tools. |
+| `skills/aggression-heatmap` | The options aggression widget — heatmap per strike and tape per contract — read as the chart reads it, with `options_aggression_view`. |
+| `skills/dealer-positioning` | Dealer gamma positioning: where gamma sits by expiry and strike, the structure by days to expiry, the tape check, and the Coinbase book contrast. |
 
-Guides for the kinds of question the chart answers go in `skills/`, one per kind. Satoshi loads
-them when a question needs one; the agent itself holds only the rules.
+Guides for the kinds of question the chart answers go in `skills/`, one per kind. The copilots
+load them when a question needs one; the agents themselves hold only the rules.
+
+### Evals
+
+`evals/` holds one directory per case. MCP tools are answered by the mocks in `evals/mocks/satoshi/`,
+so no engine or connection is needed; `_tools.json` there carries the real tool descriptions and
+schemas, regenerated from the engine whenever a mocked tool changes. Run them with ToolSearch
+granted, since plugin MCP tools load deferred:
+
+```
+claude plugin eval plugins/satoshi-ai --allow-tools ToolSearch
+``` Each skill
+has its cases under a directory named after it.
 
 ### Production and other environments
 
-`/gexchart:connect <code>` connects to production. Any other environment is named in the command —
-`/gexchart:connect <code> http://localhost:5173` — and the chart puts its own address in the
+`/satoshi-ai:connect <code>` connects to production. Any other environment is named in the command —
+`/satoshi-ai:connect <code> http://localhost:5173` — and the chart puts its own address in the
 command it shows whenever it is not production, so copying it is enough. Nothing is remembered
 between connections: each one goes where its command says, and the answer names it.
 
@@ -88,6 +112,6 @@ between connections: each one goes where its command says, and the answer names 
 
 | Variable | Purpose |
 | --- | --- |
-| `GEXCHART_URL` | The default target for this process when `/gexchart:connect` names none. Production (`https://app.strategyview.trade`) otherwise. |
-| `GEXCHART_TOKEN` | A connector token for this process only, for driving the plugin by hand. Normally `/gexchart:connect` holds it in memory. |
-| `GEXCHART_ENGINE_URL` | Only when the chat is served somewhere other than `GEXCHART_URL`. |
+| `SATOSHI_AI_URL` | The default target for this process when `/satoshi-ai:connect` names none. Production (`https://app.strategyview.trade`) otherwise. |
+| `SATOSHI_AI_TOKEN` | A connector token for this process only, for driving the plugin by hand. Normally `/satoshi-ai:connect` holds it in memory. |
+| `SATOSHI_AI_ENGINE_URL` | Only when the chat is served somewhere other than `SATOSHI_AI_URL`. |

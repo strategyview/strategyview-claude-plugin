@@ -6,9 +6,9 @@
   },
   "plugins": [
     {
-      "name": "gexchart",
-      "source": "./plugins/gexchart",
-      "description": "Answer questions about the GEX Chart from your own Claude Code session."
+      "name": "satoshi-ai",
+      "source": "./plugins/satoshi-ai",
+      "description": "Satoshi AI for StrategyView — answers the GEX Chart and Backtesting Labs assistant panels from your own Claude Code session, one context per window."
     }
   ]
 }

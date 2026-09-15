@@ -1,0 +1,320 @@
+{
+  "tools": [
+    {
+      "name": "options_tape_aggression_by_strike",
+      "title": "Tape aggression by strike",
+      "description": "Traded options flow per strike over a window, split by which side crossed the spread. This is what says whether dealers are long or short the gamma at a strike — open interest alone does not, since it carries no sign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "BTC",
+              "ETH"
+            ],
+            "description": "The underlying. Deribit lists options on BTC and ETH only."
+          },
+          "from_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch."
+          },
+          "to_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "bucket_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Bucket size in ms."
+          },
+          "strike_min": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Lowest strike to include."
+          },
+          "strike_max": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Highest strike to include."
+          }
+        },
+        "required": [
+          "currency",
+          "from_ms",
+          "to_ms"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "options_tape_aggression_by_contract",
+      "title": "Tape aggression by contract",
+      "description": "The same traded flow, per contract rather than per strike, so calls and puts are told apart at the same strike.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "BTC",
+              "ETH"
+            ],
+            "description": "The underlying. Deribit lists options on BTC and ETH only."
+          },
+          "from_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch."
+          },
+          "to_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "bucket_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Bucket size in ms."
+          },
+          "strike_min": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Lowest strike to include."
+          },
+          "strike_max": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Highest strike to include."
+          }
+        },
+        "required": [
+          "currency",
+          "from_ms",
+          "to_ms"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "option_contracts_catalog",
+      "title": "Listed contracts",
+      "description": "Every option contract currently listed, with its expiry and strike. Read this before passing an expiration_timestamp anywhere else: an expiry that is not listed returns nothing, and a date guessed from a calendar usually is not listed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "options_aggression_view",
+      "title": "The options aggression widget, as displayed",
+      "description": "What the options aggression widget on the chart is showing, read the way the chart reads it: the heatmap (taker aggression per strike and side, summed over the last 300 bars of the chart timeframe, every strike) and the tape (net flow per contract over the last 30 days, inside the band spot ± spot × realised vol × √(7/365)), both with the widget's days-to-expiry filter. Use it when the question is about what the person sees in that widget. When they name a range themselves — expiries, strikes, a window — use options_tape_aggression_by_strike or _by_contract instead. Prints that arrived live after the chart loaded are not included.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chart_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The chart_key attribute of the question, e.g. \"binance-spot-btc\". The venue, market and asset the chart is drawn from."
+          },
+          "timeframe": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The timeframe attribute of the question, e.g. \"1h\". The heatmap buckets are this size."
+          },
+          "max_dte": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The widget's days-to-expiry filter: get_workspace → widgets → optionsAggression → maxDte. Omit it, or pass null, when the widget has none."
+          }
+        },
+        "required": [
+          "chart_key",
+          "timeframe"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_workspace",
+      "title": "What is mounted on a workspace",
+      "description": "Opens one workspace: the symbol, the timeframe and every indicator and widget mounted on it. Read this first when the question is about what the person is seeing — it says which of the other tools answers it, instead of guessing from the question alone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The id from list_workspaces, as it appears there — e.g. \"O8PnVPGb\"."
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "ohlc_history",
+      "title": "Candles",
+      "description": "Open, high, low, close and volume for a symbol on one venue. What answers where price has been, and the reference for anything about a level being reached or held.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "enum": [
+              "binance",
+              "bybit",
+              "coinbase",
+              "gate",
+              "okx"
+            ],
+            "description": "The venue the figures come from."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instrument, as the venue lists it — BTCUSDT on Binance, BTC-USD on Coinbase."
+          },
+          "market": {
+            "type": "string",
+            "enum": [
+              "spot",
+              "perpetual"
+            ],
+            "default": "spot",
+            "description": "Which book: the spot pair or the perpetual."
+          },
+          "timeframe": {
+            "type": "string",
+            "default": "1h",
+            "description": "Candle size: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
+          },
+          "start": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch. Omit for the most recent bars."
+          },
+          "end": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "How many rows at most. The dashboard caps it."
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "ohlc_data_range",
+      "title": "How far back the candles go",
+      "description": "The first and last bar stored for a symbol and timeframe. Ask before a long window, so a range with no data is known rather than reported as an empty market.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "enum": [
+              "bybit",
+              "coinbase",
+              "gate",
+              "okx"
+            ],
+            "description": "The venue the figures come from."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instrument, as the venue lists it — BTCUSDT on Binance, BTC-USD on Coinbase."
+          },
+          "market": {
+            "type": "string",
+            "enum": [
+              "spot",
+              "perpetual"
+            ],
+            "default": "spot",
+            "description": "Which book: the spot pair or the perpetual."
+          },
+          "timeframe": {
+            "type": "string",
+            "default": "1h",
+            "description": "Candle size: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "validate_script",
+      "title": "Validate a rule script",
+      "description": "Parses a script and reports what is wrong with it, without fetching data or running anything. Call it on every draft before the script is run in Labs: it is free, and its errors name the position and list what would have been valid there.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The rule script, exactly as it would be run. script_grammar says what it may contain."
+          },
+          "chart": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Aliases on the chart and the plots each exposes — in Labs, the chart_plots attribute of the question, e.g. {\"ema9\": [\"ema\"]}. Omit only to check syntax: without it a plot that does not exist passes here and fails at run time."
+          }
+        },
+        "required": [
+          "script"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "script_grammar",
+      "title": "The rule language",
+      "description": "Every statement, operator and function a strategy script may use. Read it once before writing a script, then write only what it lists and check the draft with validate_script.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ]
+}

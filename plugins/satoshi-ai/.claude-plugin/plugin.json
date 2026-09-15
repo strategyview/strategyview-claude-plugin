@@ -1,0 +1,15 @@
+{
+  "name": "satoshi-ai",
+  "description": "Satoshi AI for StrategyView — answers the GEX Chart and Backtesting Labs assistant panels from your own Claude Code session, one context per window. Connect with /satoshi-ai:connect <code>.",
+  "version": "0.3.3",
+  "keywords": [
+    "satoshi-ai",
+    "strategyview",
+    "gexchart",
+    "backtesting",
+    "options",
+    "trading",
+    "channel",
+    "mcp"
+  ]
+}
