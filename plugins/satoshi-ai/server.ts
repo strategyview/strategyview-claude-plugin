@@ -239,7 +239,7 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 // --- MCP server --------------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'satoshi-ai', version: '0.3.3' },
+  { name: 'satoshi-ai', version: '0.3.4' },
   {
     // listChanged, because the data tools appear only once the session is connected, and
     // disappear if the connection is revoked — Claude has to be told to ask again.
@@ -292,7 +292,7 @@ const closeUpstream = async (): Promise<void> => {
  */
 const openUpstream = async (current: Config): Promise<void> => {
   await closeUpstream()
-  const client = new Client({ name: 'satoshi-ai', version: '0.3.3' })
+  const client = new Client({ name: 'satoshi-ai', version: '0.3.4' })
 
   try {
     const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
