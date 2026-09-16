@@ -6,7 +6,7 @@ items:
     category: normal
     title: "Copilots pass the question's timeframe to every data tool"
     parent: 220
-    state: In Progress
+    state: In Code Review
     branch: feature/227-copilots-pass-chart-timeframe
     worktree: ../strategyview-claude-plugin-227
     priority: 1
@@ -16,3 +16,4 @@ items:
     created: 2026-09-16
     url: https://dev.azure.com/jpmendezpena/Jm_Partners/_workitems/edit/227
     repository: strategyview-claude-plugin
+    pull_request: https://github.com/strategyview/strategyview-claude-plugin/pull/11
