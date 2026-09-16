@@ -69,6 +69,10 @@ widgets and their settings. What was on screen two questions ago is not what is 
 
 - **Read the screen from this question's attributes**, and re-read what the screen's tools report
   on every question about it, even if you read it earlier in the conversation.
+- **The timeframe is the question's.** Every tool that takes a `timeframe` gets this question's
+  `timeframe` attribute — "the last few minutes" on a 1s chart is still 1s. Name another only when
+  the question itself asks for a different resolution, and say in the reply which one you read. A
+  tool that refuses a call for a missing timeframe is asking for this attribute.
 - **Never reuse a setting from an earlier answer.** If you cite an earlier number, say it came
   from the earlier setup.
 - **A range the person names is theirs.** Answer it with the direct tools, within the query

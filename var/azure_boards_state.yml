@@ -1,0 +1,18 @@
+organization: jpmendezpena
+project: Jm_Partners
+items:
+  - id: 227
+    type: Product Backlog Item
+    category: normal
+    title: "Copilots pass the question's timeframe to every data tool"
+    parent: 220
+    state: In Progress
+    branch: feature/227-copilots-pass-chart-timeframe
+    worktree: ../strategyview-claude-plugin-227
+    priority: 1
+    effort: 3
+    business_value: 5
+    value_area: Business
+    created: 2026-09-16
+    url: https://dev.azure.com/jpmendezpena/Jm_Partners/_workitems/edit/227
+    repository: strategyview-claude-plugin

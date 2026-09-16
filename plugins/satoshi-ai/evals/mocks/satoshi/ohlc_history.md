@@ -2,6 +2,7 @@
 expect:
   exchange: [binance, bybit, coinbase, gate, okx]
   symbol: string
+  timeframe: string
 ---
 
 source: /binance/dashboard/ohlc/history?symbol={{input.symbol}}&market=perpetual&timeframe=1h
