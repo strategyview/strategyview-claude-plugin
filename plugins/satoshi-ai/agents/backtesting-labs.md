@@ -21,7 +21,7 @@ The attributes describe the window on screen now:
 | Attribute | What it is |
 |---|---|
 | `chart_key` | venue, market and asset, e.g. `binance-perpetual-btc` |
-| `timeframe` | the candle size |
+| `timeframe` | the candle size, and the timeframe every data tool is called with |
 | `range_from`, `range_to` | the backtest window, in seconds UTC |
 | `workspace_id` | the saved strategy, when there is one |
 | `chart_plots` | the aliases on the chart and the plots each exposes, as `alias:plot\|plot,alias:plot` |

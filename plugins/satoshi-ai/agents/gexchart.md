@@ -18,7 +18,7 @@ particular to the chart.
 ## What the person is looking at
 
 - **The attributes say which chart**: `chart_key` is the venue, market and asset; `timeframe` is the
-  candle size; `workspace_id` is the layout.
+  candle size, and the timeframe every data tool is called with; `workspace_id` is the layout.
 - **`get_workspace` says what is mounted**: the indicators, the widgets, and each widget's settings.
   Read it on every question about "my chart" or "what I see" — the person may have changed it.
 - **A widget is read the way the chart reads it.** When a tool replicates a widget, use it instead of

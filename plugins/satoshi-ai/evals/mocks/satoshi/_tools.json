@@ -203,8 +203,8 @@
           },
           "timeframe": {
             "type": "string",
-            "default": "1h",
-            "description": "Candle size: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
+            "minLength": 1,
+            "description": "The timeframe attribute of the question — the chart the person has open, e.g. \"1m\". Name another only when the question itself asks for a different resolution. Candle sizes: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
           },
           "start": {
             "type": "integer",
@@ -224,7 +224,8 @@
         },
         "required": [
           "exchange",
-          "symbol"
+          "symbol",
+          "timeframe"
         ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
@@ -263,13 +264,66 @@
           },
           "timeframe": {
             "type": "string",
-            "default": "1h",
-            "description": "Candle size: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
+            "minLength": 1,
+            "description": "The timeframe attribute of the question — the chart the person has open, e.g. \"1m\". Name another only when the question itself asks for a different resolution. Candle sizes: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M."
           }
         },
         "required": [
           "exchange",
-          "symbol"
+          "symbol",
+          "timeframe"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "open_interest_history",
+      "title": "Open interest over time",
+      "description": "Open interest per bar on a perpetual. Read next to price: rising together is new positioning, price rising while it falls is covering. The exchange publishes open interest as a LEVEL, not as a flow: Binance restates it every 1 to 7 s, irregularly, and stamps each publication. At 1s each bar therefore carries the window that closed on it — `d`, the contracts the level moved since the previous stamp, and `w`, the milliseconds between the two. That pair is what places opening and closing in TIME: the net change over a window is known, the instant inside it is not, and crossing `d` against taker aggression, which does carry millisecond resolution, is what resolves it. Both are omitted above 1s, where several windows fall inside one bar and a single pair would describe none of them, and absent on Bybit and Gate, which never stamp a measurement.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "enum": [
+              "binance",
+              "bybit",
+              "gate",
+              "okx"
+            ],
+            "description": "The venue the figures come from."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The asset, BTC or ETH. The venue's own symbol is worked out from the exchange and the market, so BTC, BTC-USD, BTCUSD and BTCUSDT all read the same."
+          },
+          "timeframe": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The timeframe attribute of the question — the chart the person has open. Name another only when the question needs a different resolution: 1s to place a move within minutes, 1m or 5m for the shape of a session. Bar sizes: 1s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M. The bars are folded from a tape polled every second, so high and low are the real range INSIDE the bar, not one reading, and `n` counts the exchange publications that fell in it. At 1s the seconds the exchange did not restate are carried forward flat with `n` 0: those bars mean \"the level did not move\", never \"no data\" — reading them as a gap is the common mistake. Below 5m only the stored tape exists, with no exchange history behind it."
+          },
+          "start": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window start, millisecond epoch. Omit for the most recent bars."
+          },
+          "end": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Window end, millisecond epoch."
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Rows at most; the dashboard caps it at 1000, which is about 16 minutes at 1s and 16 hours at 1m. A window wider than the budget comes back as its MOST RECENT rows and says nothing about the rest, so cover a long period by widening the bar size, never by raising this."
+          }
+        },
+        "required": [
+          "exchange",
+          "symbol",
+          "timeframe"
         ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
