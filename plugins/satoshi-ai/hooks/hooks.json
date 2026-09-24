@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_satoshi-ai_satoshi__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/approve-satoshi-tools.ts\""
+          }
+        ]
+      }
+    ]
+  }
+}
