@@ -79,14 +79,31 @@ minutes, so if it has expired they get a new one from the chart.
 
 If Bun was already there in step 1, only the restart above is needed.
 
-## Step 3 — connect
+## Step 3 — offer updates, only if they are off
 
-Call the `connect` tool of the satoshi server with `code`, and `url` only if they gave one.
+Look at the `connect` tool's input schema. If it has no `auto_update` parameter, auto-update is
+already on: skip this step and ask nothing.
+
+If it has one, the plugin does not update itself yet — a marketplace outside Anthropic's stays on
+the version installed until someone turns updates on. Ask once, in their own language, before
+connecting. Something like:
+
+> Do you want the GEX Chart plugin to keep itself up to date? New versions would then load each
+> time you start Claude Code, with nothing to run.
+
+Only a clear yes is a yes. Anything else — a no, a question, silence — is `false`, and connecting
+goes ahead the same.
+
+## Step 4 — connect
+
+Call the `connect` tool of the satoshi server with `code`, `url` only if they gave one, and
+`auto_update` with their answer from step 3 when the tool offers it.
 
 - **Success** — say the session is connected, to which environment (the tool names it:
   production or not), and that questions typed in that chart's panel will now arrive here.
   Nothing else to run, no restart. Mention that this is now the one session that answers the
-  chart: any session connected before it stops, and restarting Claude needs a new code.
+  chart: any session connected before it stops, and restarting Claude needs a new code. If the
+  tool reports on auto-update, pass that on in one line.
 - **Failure** — the code is single use and lives ten minutes. Say it was not accepted and ask
   for a fresh one from the chart. Do not retry the same code.
 

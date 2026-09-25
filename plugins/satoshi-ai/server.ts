@@ -39,6 +39,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { rmSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { autoUpdateOutcome, isMarketplaceAutoUpdateOn } from './marketplace-auto-update.ts'
 
 /**
  * Where versions before 0.3.1 kept state: the token first, then the last address connected to.
@@ -239,7 +240,7 @@ const sendReply = async (config: Config, messageId: string, text: string): Promi
 // --- MCP server --------------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'satoshi-ai', version: '0.3.5' },
+  { name: 'satoshi-ai', version: '0.3.6' },
   {
     // listChanged, because the data tools appear only once the session is connected, and
     // disappear if the connection is revoked — Claude has to be told to ask again.
@@ -292,7 +293,7 @@ const closeUpstream = async (): Promise<void> => {
  */
 const openUpstream = async (current: Config): Promise<void> => {
   await closeUpstream()
-  const client = new Client({ name: 'satoshi-ai', version: '0.3.5' })
+  const client = new Client({ name: 'satoshi-ai', version: '0.3.6' })
 
   try {
     const endpoint = new URL(`${current.engineUrl}/mcp/c/${encodeURIComponent(current.token)}`)
@@ -322,7 +323,16 @@ const openUpstream = async (current: Config): Promise<void> => {
 const text = (value: string) => ({ content: [{ type: 'text', text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
 
-const LOCAL_TOOL_DEFINITIONS: Tool[] = [
+const AUTO_UPDATE_PROPERTY = {
+  auto_update: {
+    type: 'boolean',
+    description:
+      'True only when the user said yes, in this terminal, to the plugin updating itself: it ' +
+      'turns on auto-update for the StrategyView marketplace in their Claude Code settings.',
+  },
+}
+
+const localToolDefinitions = (): Tool[] => [
     {
       name: 'reply',
       description:
@@ -355,6 +365,7 @@ const LOCAL_TOOL_DEFINITIONS: Tool[] = [
               `Only when the command from the chart names one. Without it, production ` +
               `(${DEFAULT_URL}). Never carried over from an earlier connection.`,
           },
+          ...(isMarketplaceAutoUpdateOn() ? {} : AUTO_UPDATE_PROPERTY),
         },
         required: ['code'],
       },
@@ -362,7 +373,7 @@ const LOCAL_TOOL_DEFINITIONS: Tool[] = [
 ]
 
 mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [...LOCAL_TOOL_DEFINITIONS, ...upstreamTools],
+  tools: [...localToolDefinitions(), ...upstreamTools],
 }))
 
 mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -385,7 +396,8 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
       const environment = url === trimSlash(DEFAULT_URL) ? 'production' : 'not production'
       return text(
         `Connected to ${new URL(url).host} (${environment}). ` +
-          'Questions from that chart panel arrive here.'
+          'Questions from that chart panel arrive here.' +
+          autoUpdateOutcome(args.auto_update)
       )
     } catch (error) {
       return failure(error instanceof Error ? error.message : String(error))
